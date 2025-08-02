@@ -1,641 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Trading Strategy Tester</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #ffffff;
+        }
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        select, button {
+            padding: 8px 12px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background: #2a2a2a;
+            color: #ffffff;
+        }
+        button {
+            background: #007bff;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .stat-item {
+            background: #333;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .positive { color: #4CAF50; }
+        .negative { color: #f44336; }
+        .trade-table {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #333;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+        .trade-table table {
+            width: 100%;
+            border-collapse: collapse;
+            color: white;
+        }
+        .trade-table th,
+        .trade-table td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #444;
+        }
+        .trade-table th {
+            background: #444;
+            font-weight: bold;
+        }
+    </style>
+</head>
 <body>
-    <h2>AI-Powered Chart with Backtest Overlay</h2>
-    <label for="pairSelect">Select Trading Pair:</label>
-    <select id="pairSelect">
-      <option value="btcusdt">BTC/USDT</option>
-      <option value="ethusdt">ETH/USDT</option>
-      <option value="bnbusdt">BNB/USDT</option>
-      <option value="xrpusdt">XRP/USDT</option>
-      <option value="adausdt">ADA/USDT</option>
-      <option value="ltcusdt">LTC/USDT</option>
-      <option value="solusdt">SOL/USDT</option>
-      <option value="dogeusdt">DOGE/USDT</option>
-      <option value="maticusdt">MATIC/USDT</option>
-      <option value="dotusdt">DOT/USDT</option>
-    </select>
+    <h1>Advanced Trading Strategy Tester</h1>
     
-    <label for="strategySelect" style="margin-left: 20px;">Select Strategy:</label>
-    <select id="strategySelect">
-      <option value="ma_crossover">Moving Average Crossover</option>
-      <option value="rsi_strategy">RSI Strategy</option>
-      <option value="macd_strategy">MACD Strategy</option>
-      <option value="custom_strategy">Custom Strategy</option>
-      <option value="high_frequency">High Frequency Strategy</option>
-    </select>
-    
-    <button id="runStrategyBtn" style="margin-left: 20px; padding: 5px 15px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer;">Run Strategy</button>
-    <div id="chart" style="width: 100%; height: 1000px;"></div>
-    <div id="tester" style="padding: 1rem; background: #f9f9f9; border-top: 1px solid #ccc;">
-      <h3>Strategy Tester</h3>
-      <p>Total Trades: <span id="tradeCount">0</span></p>
-      <p>Win Rate: <span id="winRate">0%</span></p>
-      <p>Net Profit: <span id="netProfit">0</span> USDT</p>
+    <div class="controls">
+        <label for="pairSelect">Trading Pair:</label>
+        <select id="pairSelect">
+            <option value="btcusdt">BTC/USDT</option>
+            <option value="ethusdt">ETH/USDT</option>
+            <option value="bnbusdt">BNB/USDT</option>
+            <option value="xrpusdt">XRP/USDT</option>
+            <option value="adausdt">ADA/USDT</option>
+            <option value="ltcusdt">LTC/USDT</option>
+            <option value="solusdt">SOL/USDT</option>
+            <option value="dogeusdt">DOGE/USDT</option>
+            <option value="maticusdt">MATIC/USDT</option>
+            <option value="dotusdt">DOT/USDT</option>
+        </select>
+        
+        <label for="strategySelect">Strategy:</label>
+        <select id="strategySelect">
+            <option value="ma_crossover">Moving Average Crossover</option>
+            <option value="rsi_strategy">RSI Strategy</option>
+            <option value="macd_strategy">MACD Strategy</option>
+            <option value="custom_strategy">Custom Strategy</option>
+            <option value="high_frequency">High Frequency Strategy</option>
+        </select>
+        
+        <button id="runStrategyBtn">Run Strategy</button>
+        <button id="clearBtn">Clear Chart</button>
     </div>
-  
+
+    <div id="chart" style="width: 100%; height: 850px;"></div>
+    
+    <div id="tester" style="padding: 1rem; background: #2a2a2a; border-radius: 4px; margin-top: 20px;">
+        <h3>Strategy Results</h3>
+        <div id="resultsContent">
+            <p>Run a strategy to see results here.</p>
+        </div>
+    </div>
+
     <script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
     <script>
-      const chart = LightweightCharts.createChart(document.getElementById('chart'), {
-        layout: { backgroundColor: '#000000', textColor: '#000' },
-        grid: { vertLines: { color: '#eee' }, horLines: { color: '#eee' } },
-        timeScale: { timeVisible: true, secondsVisible: false },
-      });
-  
-      const candleSeries = chart.addCandlestickSeries();
-      const buyMarkers = [];
-      const sellMarkers = [];
-  
-      let socket;
-  
-      function setupWebSocket(pair) {
-        if (socket) socket.close();
-        socket = new WebSocket(`wss://stream.binance.com:9443/ws/${pair}@kline_1m`);
-        socket.onmessage = (event) => {
-          const message = JSON.parse(event.data);
-          const k = message.k;
-          const liveCandle = {
-            time: k.t / 1000,
-            open: parseFloat(k.o),
-            high: parseFloat(k.h),
-            low: parseFloat(k.l),
-            close: parseFloat(k.c),
-          };
-          candleSeries.update(liveCandle);
-        };
-      }
-  
-      async function fetchData(pair) {
-        let allCandles = [];
-        let endTime = Date.now();
-        const limit = 1000; // Binance's max per request
-        const maxCandles = 5000; // Total candles you want
-        const loops = Math.ceil(maxCandles / limit);
+        const chart = LightweightCharts.createChart(document.getElementById('chart'), {
+            layout: { backgroundColor: '#000000', textColor: '#ffffff' },
+            grid: { vertLines: { color: '#333333' }, horLines: { color: '#333333' } },
+            timeScale: { timeVisible: true, secondsVisible: false },
+        });
 
-        console.log(`Fetching up to ${maxCandles} candles for ${pair}...`);
+        const candleSeries = chart.addCandlestickSeries();
+        let currentCandles = [];
+        let socket;
 
-        for (let i = 0; i < loops; i++) {
-          const url = `https://api.binance.com/api/v3/klines?symbol=${pair.toUpperCase()}&interval=1m&limit=${limit}&endTime=${endTime}`;
-          const res = await fetch(url);
-          const raw = await res.json();
-
-          if (!raw.length) break;
-
-          const candles = raw.map(d => ({
-            time: d[0] / 1000,
-            open: parseFloat(d[1]),
-            high: parseFloat(d[2]),
-            low: parseFloat(d[3]),
-            close: parseFloat(d[4]),
-          }));
-
-          allCandles = [...candles, ...allCandles];
-          endTime = raw[0][0] - 1;
-
-          console.log(`Fetched ${candles.length} candles, total: ${allCandles.length}`);
-
-          if (candles.length < limit) break; // no more data
+        function setupWebSocket(pair) {
+            if (socket) socket.close();
+            socket = new WebSocket(`wss://stream.binance.com:9443/ws/${pair}@kline_1m`);
+            socket.onmessage = (event) => {
+                const message = JSON.parse(event.data);
+                const k = message.k;
+                const liveCandle = {
+                    time: k.t / 1000,
+                    open: parseFloat(k.o),
+                    high: parseFloat(k.h),
+                    low: parseFloat(k.l),
+                    close: parseFloat(k.c),
+                };
+                candleSeries.update(liveCandle);
+            };
         }
 
-        console.log(`Total candles fetched: ${allCandles.length}`);
+        async function fetchData(pair) {
+            let allCandles = [];
+            let endTime = Date.now();
+            const limit = 1000;
+            const maxCandles = 5000;
+            const loops = Math.ceil(maxCandles / limit);
 
-        candleSeries.setData(allCandles);
-        
-        // Store candles globally for strategy testing
-        currentCandles = allCandles;
+            console.log(`Fetching up to ${maxCandles} candles for ${pair}...`);
 
-        // EMA calculation and overlays
-        const ema = (data, len) => {
-          const k = 2 / (len + 1);
-          let emaArray = [];
-          let prevEma = data[0].close;
-          for (let i = 0; i < data.length; i++) {
-            const close = data[i].close;
-            const nextEma = i === 0 ? close : close * k + prevEma * (1 - k);
-            emaArray.push({ time: data[i].time, value: nextEma });
-            prevEma = nextEma;
-          }
-          return emaArray;
-        };
+            for (let i = 0; i < loops; i++) {
+                const url = `https://api.binance.com/api/v3/klines?symbol=${pair.toUpperCase()}&interval=1m&limit=${limit}&endTime=${endTime}`;
+                const res = await fetch(url);
+                const raw = await res.json();
 
-        const ema20 = chart.addLineSeries({ color: 'blue', lineWidth: 1 });
-        const ema200 = chart.addLineSeries({ color: 'orange', lineWidth: 1 });
+                if (!raw.length) break;
 
-        ema20.setData(ema(allCandles, 20));
-        ema200.setData(ema(allCandles, 200));
+                const candles = raw.map(d => ({
+                    time: d[0] / 1000,
+                    open: parseFloat(d[1]),
+                    high: parseFloat(d[2]),
+                    low: parseFloat(d[3]),
+                    close: parseFloat(d[4]),
+                }));
 
-        // Store series references
-        ema20Series = ema20;
-        ema200Series = ema200;
+                allCandles = [...candles, ...allCandles];
+                endTime = raw[0][0] - 1;
 
-        // Run initial strategy test
-        updateChartWithStrategy();
-      }
-  
-      // Removed runBacktest function - now using updateChartWithStrategy instead
-
-      function getStrategyRules(strategyType) {
-        const strategies = {
-          ma_crossover: {
-            name: "Moving Average Crossover",
-            shortPeriod: 5,  // Changed from 10 to 5 for more signals
-            longPeriod: 20,  // Changed from 50 to 20 for more signals
-            type: "crossover",
-            conditions: {
-              buy: (shortMA, longMA, data, index) => shortMA > longMA,
-              sell: (shortMA, longMA, data, index) => shortMA < longMA
+                if (candles.length < limit) break;
             }
-          },
-          
-          rsi_strategy: {
-            name: "RSI Strategy",
-            rsiPeriod: 14,
-            type: "rsi",
-            conditions: {
-              buy: (rsi, data, index) => rsi < 35, // Changed from 30 to 35 for more signals
-              sell: (rsi, data, index) => rsi > 65  // Changed from 70 to 65 for more signals
-            }
-          },
-          
-          macd_strategy: {
-            name: "MACD Strategy",
-            fastPeriod: 8,   // Changed from 12 to 8 for more signals
-            slowPeriod: 21,  // Changed from 26 to 21 for more signals
-            signalPeriod: 5, // Changed from 9 to 5 for more signals
-            type: "macd",
-            conditions: {
-              buy: (macd, signal, histogram, data, index) => 
-                macd > signal, // Simplified condition for more signals
-              sell: (macd, signal, histogram, data, index) => 
-                macd < signal  // Simplified condition for more signals
-            }
-          },
-          
-          custom_strategy: {
-            name: "Custom Strategy (RSI + Volume)",
-            rsiPeriod: 14,
-            type: "custom",
-            conditions: {
-              buy: (rsi, data, index) => {
-                // More aggressive custom logic
-                if (rsi < 40 && index >= 10) { // Changed from 30 to 40, 20 to 10
-                  const sma10 = calculateSMA(data, 10); // Changed from 20 to 10
-                  return data[index].close > sma10[index];
+
+            console.log(`Total candles fetched: ${allCandles.length}`);
+            candleSeries.setData(allCandles);
+            currentCandles = allCandles;
+
+            // Add EMA lines
+            const ema = (data, len) => {
+                const k = 2 / (len + 1);
+                let emaArray = [];
+                let prevEma = data[0].close;
+                for (let i = 0; i < data.length; i++) {
+                    const close = data[i].close;
+                    const nextEma = i === 0 ? close : close * k + prevEma * (1 - k);
+                    emaArray.push({ time: data[i].time, value: nextEma });
+                    prevEma = nextEma;
                 }
-                return false;
-              },
-              sell: (rsi, data, index) => {
-                // More aggressive sell conditions
-                if (rsi > 60 || (index >= 10)) { // Changed from 70 to 60, 20 to 10
-                  const sma10 = calculateSMA(data, 10); // Changed from 20 to 10
-                  return data[index].close < sma10[index];
+                return emaArray;
+            };
+
+            const ema20 = chart.addLineSeries({ color: 'blue', lineWidth: 1 });
+            const ema200 = chart.addLineSeries({ color: 'orange', lineWidth: 1 });
+
+            ema20.setData(ema(allCandles, 20));
+            ema200.setData(ema(allCandles, 200));
+
+            updateChartWithStrategy();
+        }
+
+        function getStrategyRules(strategyType) {
+            const strategies = {
+                ma_crossover: {
+                    name: "Moving Average Crossover",
+                    shortPeriod: 5,
+                    longPeriod: 20,
+                    type: "crossover",
+                    conditions: {
+                        buy: (shortMA, longMA, data, index) => shortMA > longMA,
+                        sell: (shortMA, longMA, data, index) => shortMA < longMA
+                    }
+                },
+                
+                rsi_strategy: {
+                    name: "RSI Strategy",
+                    rsiPeriod: 14,
+                    type: "rsi",
+                    conditions: {
+                        buy: (rsi, data, index) => rsi < 35,
+                        sell: (rsi, data, index) => rsi > 65
+                    }
+                },
+                
+                macd_strategy: {
+                    name: "MACD Strategy",
+                    fastPeriod: 8,
+                    slowPeriod: 21,
+                    signalPeriod: 5,
+                    type: "macd",
+                    conditions: {
+                        buy: (macd, signal, histogram, data, index) => macd > signal,
+                        sell: (macd, signal, histogram, data, index) => macd < signal
+                    }
+                },
+                
+                custom_strategy: {
+                    name: "Custom Strategy (RSI + Volume)",
+                    rsiPeriod: 14,
+                    type: "custom",
+                    conditions: {
+                        buy: (rsi, data, index) => {
+                            if (rsi < 40 && index >= 10) {
+                                const sma10 = calculateSMA(data, 10);
+                                return data[index].close > sma10[index];
+                            }
+                            return false;
+                        },
+                        sell: (rsi, data, index) => {
+                            if (rsi > 60 || (index >= 10)) {
+                                const sma10 = calculateSMA(data, 10);
+                                return data[index].close < sma10[index];
+                            }
+                            return false;
+                        }
+                    }
+                },
+                
+                high_frequency: {
+                    name: "High Frequency Strategy",
+                    shortPeriod: 3,
+                    longPeriod: 8,
+                    rsiPeriod: 7,
+                    type: "high_freq",
+                    conditions: {
+                        buy: (shortMA, longMA, rsi, data, index) => {
+                            return (shortMA > longMA) || (rsi < 25);
+                        },
+                        sell: (shortMA, longMA, rsi, data, index) => {
+                            return (shortMA < longMA) || (rsi > 75);
+                        }
+                    }
                 }
-                return false;
-              }
+            };
+            
+            return strategies[strategyType] || strategies.ma_crossover;
+        }
+
+        function runStrategy(data, rules) {
+            const trades = [];
+            const buyMarkers = [];
+            const sellMarkers = [];
+            let inPosition = false;
+            let entryPrice = 0;
+
+            console.log("Running strategy with data length:", data.length);
+
+            const indicators = calculateIndicators(data, rules);
+            const startIndex = Math.max(rules.shortPeriod || 0, rules.longPeriod || 0, rules.rsiPeriod || 0);
+            
+            for (let i = startIndex; i < data.length; i++) {
+                const currentData = data[i];
+                const indicatorValues = getIndicatorValues(indicators, i, rules);
+
+                // Check buy condition (not in position and buy signal)
+                if (!inPosition && rules.conditions.buy(...indicatorValues, data, i)) {
+                    console.log(`BUY SIGNAL at index ${i}, price ${currentData.close}`);
+                    trades.push({ 
+                        time: currentData.time, 
+                        action: 'BUY', 
+                        price: currentData.close,
+                        index: i 
+                    });
+                    
+                    buyMarkers.push({
+                        time: currentData.time,
+                        position: 'belowBar',
+                        color: 'green',
+                        shape: 'arrowUp',
+                        text: 'Buy',
+                        size: 1
+                    });
+                    
+                    inPosition = true;
+                    entryPrice = currentData.close;
+                }
+                
+                // Check sell condition (in position and sell signal)
+                else if (inPosition && rules.conditions.sell(...indicatorValues, data, i)) {
+                    console.log(`SELL SIGNAL at index ${i}, price ${currentData.close}`);
+                    trades.push({ 
+                        time: currentData.time, 
+                        action: 'SELL', 
+                        price: currentData.close,
+                        index: i,
+                        profit: currentData.close - entryPrice,
+                        profitPercent: ((currentData.close - entryPrice) / entryPrice) * 100
+                    });
+                    
+                    sellMarkers.push({
+                        time: currentData.time,
+                        position: 'aboveBar',
+                        color: 'red',
+                        shape: 'arrowDown',
+                        text: 'Sell',
+                        size: 1
+                    });
+                    
+                    inPosition = false; // Now we can buy again
+                }
             }
-          },
-          
-          high_frequency: {
-            name: "High Frequency Strategy",
-            shortPeriod: 3,  // Very short period
-            longPeriod: 8,   // Very short period
-            rsiPeriod: 7,    // Short RSI period
-            type: "high_freq",
-            conditions: {
-              buy: (shortMA, longMA, rsi, data, index) => {
-                // Buy when short MA crosses above long MA OR RSI is oversold
-                return (shortMA > longMA) || (rsi < 25);
-              },
-              sell: (shortMA, longMA, rsi, data, index) => {
-                // Sell when short MA crosses below long MA OR RSI is overbought
-                return (shortMA < longMA) || (rsi > 75);
-              }
+
+            console.log("Total trades found:", trades.length);
+            const stats = calculateStrategyStats(trades);
+
+            return {
+                trades,
+                buyMarkers,
+                sellMarkers,
+                stats,
+                strategyName: rules.name
+            };
+        }
+
+        function calculateIndicators(data, rules) {
+            const indicators = {};
+
+            if (rules.type === "crossover" || rules.type === "moving_average") {
+                indicators.shortMA = calculateSMA(data, rules.shortPeriod);
+                indicators.longMA = calculateSMA(data, rules.longPeriod);
             }
-          }
-        };
-        
-        return strategies[strategyType] || strategies.ma_crossover;
-      }
-
-      function runStrategy(data, rules) {
-        const trades = [];
-        const buyMarkers = [];
-        const sellMarkers = [];
-        let inPosition = false;
-        let entryPrice = 0;
-        let entryTime = 0;
-
-        console.log("Running strategy with data length:", data.length);
-        console.log("Strategy type:", rules.type);
-
-        // Calculate indicators based on strategy type
-        const indicators = calculateIndicators(data, rules);
-        console.log("Calculated indicators:", Object.keys(indicators));
-
-        // Loop through data points
-        const startIndex = Math.max(rules.shortPeriod || 0, rules.longPeriod || 0, rules.rsiPeriod || 0);
-        console.log("Starting from index:", startIndex);
-        
-        for (let i = startIndex; i < data.length; i++) {
-          const currentData = data[i];
-          const indicatorValues = getIndicatorValues(indicators, i, rules);
-          
-          // Debug first few iterations
-          if (i < startIndex + 5) {
-            console.log(`Index ${i}:`, {
-              time: currentData.time,
-              close: currentData.close,
-              indicatorValues: indicatorValues
-            });
-          }
-
-          // Check buy condition
-          if (!inPosition && rules.conditions.buy(...indicatorValues, data, i)) {
-            console.log(`BUY SIGNAL at index ${i}, time ${currentData.time}, price ${currentData.close}`);
-            trades.push({ 
-              time: currentData.time, 
-              action: 'BUY', 
-              price: currentData.close,
-              index: i 
-            });
             
-            buyMarkers.push({
-              time: currentData.time,
-              position: 'belowBar',
-              color: 'green',
-              shape: 'arrowUp',
-              text: 'Buy',
-              size: 1
-            });
-            
-            inPosition = true;
-            entryPrice = currentData.close;
-            entryTime = currentData.time;
-          }
-          
-          // Check sell condition
-          else if (inPosition && rules.conditions.sell(...indicatorValues, data, i)) {
-            console.log(`SELL SIGNAL at index ${i}, time ${currentData.time}, price ${currentData.close}`);
-            trades.push({ 
-              time: currentData.time, 
-              action: 'SELL', 
-              price: currentData.close,
-              index: i,
-              profit: currentData.close - entryPrice,
-              profitPercent: ((currentData.close - entryPrice) / entryPrice) * 100
-            });
-            
-            sellMarkers.push({
-              time: currentData.time,
-              position: 'aboveBar',
-              color: 'red',
-              shape: 'arrowDown',
-              text: 'Sell',
-              size: 1
-            });
-            
-            inPosition = false;
-          }
-        }
-
-        console.log("Total trades found:", trades.length);
-        console.log("Buy markers created:", buyMarkers.length);
-        console.log("Sell markers created:", sellMarkers.length);
-
-        // Calculate strategy statistics
-        const stats = calculateStrategyStats(trades);
-
-        return {
-          trades,
-          buyMarkers,
-          sellMarkers,
-          stats,
-          strategyName: rules.name
-        };
-      }
-
-      function calculateIndicators(data, rules) {
-        const indicators = {};
-
-        if (rules.type === "crossover" || rules.type === "moving_average") {
-          // Calculate Simple Moving Averages
-          indicators.shortMA = calculateSMA(data, rules.shortPeriod);
-          indicators.longMA = calculateSMA(data, rules.longPeriod);
-        }
-        
-        if (rules.type === "rsi") {
-          indicators.rsi = calculateRSI(data, rules.rsiPeriod || 14);
-        }
-        
-        if (rules.type === "macd") {
-          const macdResult = calculateMACD(data, rules.fastPeriod || 12, rules.slowPeriod || 26, rules.signalPeriod || 9);
-          indicators.macd = macdResult.macd;
-          indicators.signal = macdResult.signal;
-          indicators.histogram = macdResult.histogram;
-        }
-
-        if (rules.type === "custom") {
-          // For custom strategy, calculate RSI and SMA
-          indicators.rsi = calculateRSI(data, rules.rsiPeriod || 14);
-          indicators.sma20 = calculateSMA(data, 20);
-        }
-
-        if (rules.type === "high_freq") {
-          // For high frequency strategy, calculate both MA and RSI
-          indicators.shortMA = calculateSMA(data, rules.shortPeriod);
-          indicators.longMA = calculateSMA(data, rules.longPeriod);
-          indicators.rsi = calculateRSI(data, rules.rsiPeriod);
-        }
-
-        return indicators;
-      }
-
-      function getIndicatorValues(indicators, index, rules) {
-        const values = [];
-        
-        if (rules.type === "crossover" || rules.type === "moving_average") {
-          values.push(indicators.shortMA[index], indicators.longMA[index]);
-        }
-        
-        if (rules.type === "rsi") {
-          values.push(indicators.rsi[index]);
-        }
-        
-        if (rules.type === "macd") {
-          values.push(indicators.macd[index], indicators.signal[index], indicators.histogram[index]);
-        }
-
-        if (rules.type === "custom") {
-          values.push(indicators.rsi[index]);
-        }
-
-        if (rules.type === "high_freq") {
-          values.push(indicators.shortMA[index], indicators.longMA[index], indicators.rsi[index]);
-        }
-
-        return values;
-      }
-
-      function calculateSMA(data, period) {
-        const sma = [];
-        for (let i = 0; i < data.length; i++) {
-          if (i < period - 1) {
-            sma.push(null);
-          } else {
-            const sum = data.slice(i - period + 1, i + 1).reduce((acc, candle) => acc + candle.close, 0);
-            sma.push(sum / period);
-          }
-        }
-        return sma;
-      }
-
-      function calculateRSI(data, period = 14) {
-        const rsi = [];
-        const gains = [];
-        const losses = [];
-
-        // Calculate price changes
-        for (let i = 1; i < data.length; i++) {
-          const change = data[i].close - data[i - 1].close;
-          gains.push(change > 0 ? change : 0);
-          losses.push(change < 0 ? Math.abs(change) : 0);
-        }
-
-        // Calculate RSI
-        for (let i = 0; i < data.length; i++) {
-          if (i < period) {
-            rsi.push(null);
-          } else {
-            const avgGain = gains.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0) / period;
-            const avgLoss = losses.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0) / period;
-            const rs = avgGain / avgLoss;
-            rsi.push(100 - (100 / (1 + rs)));
-          }
-        }
-
-        return rsi;
-      }
-
-      function calculateMACD(data, fastPeriod = 12, slowPeriod = 26, signalPeriod = 9) {
-        const ema = (data, period) => {
-          const k = 2 / (period + 1);
-          const emaArray = [];
-          let prevEma = data[0].close;
-          
-          for (let i = 0; i < data.length; i++) {
-            const close = data[i].close;
-            const nextEma = i === 0 ? close : close * k + prevEma * (1 - k);
-            emaArray.push(nextEma);
-            prevEma = nextEma;
-          }
-          return emaArray;
-        };
-
-        const fastEMA = ema(data, fastPeriod);
-        const slowEMA = ema(data, slowPeriod);
-        
-        const macdLine = fastEMA.map((fast, i) => fast - slowEMA[i]);
-        const signalLine = ema(macdLine.map((val, i) => ({ close: val })), signalPeriod);
-        const histogram = macdLine.map((macd, i) => macd - signalLine[i]);
-
-        return { macd: macdLine, signal: signalLine, histogram };
-      }
-
-      function calculateStrategyStats(trades) {
-        const stats = {
-          totalTrades: trades.length,
-          buyTrades: trades.filter(t => t.action === 'BUY').length,
-          sellTrades: trades.filter(t => t.action === 'SELL').length,
-          wins: 0,
-          losses: 0,
-          totalProfit: 0,
-          totalProfitPercent: 0,
-          maxDrawdown: 0,
-          winRate: 0,
-          avgWin: 0,
-          avgLoss: 0
-        };
-
-        let currentDrawdown = 0;
-        let peak = 0;
-
-        // Calculate profit/loss for each completed trade
-        for (let i = 1; i < trades.length; i += 2) {
-          if (i < trades.length) {
-            const buy = trades[i - 1];
-            const sell = trades[i];
-            
-            if (buy.action === 'BUY' && sell.action === 'SELL') {
-              const profit = sell.price - buy.price;
-              const profitPercent = ((sell.price - buy.price) / buy.price) * 100;
-              
-              stats.totalProfit += profit;
-              stats.totalProfitPercent += profitPercent;
-              
-              if (profit > 0) {
-                stats.wins++;
-                stats.avgWin += profit;
-              } else {
-                stats.losses++;
-                stats.avgLoss += Math.abs(profit);
-              }
-
-              // Calculate drawdown
-              if (stats.totalProfit > peak) {
-                peak = stats.totalProfit;
-              }
-              currentDrawdown = peak - stats.totalProfit;
-              if (currentDrawdown > stats.maxDrawdown) {
-                stats.maxDrawdown = currentDrawdown;
-              }
+            if (rules.type === "rsi") {
+                indicators.rsi = calculateRSI(data, rules.rsiPeriod || 14);
             }
-          }
+            
+            if (rules.type === "macd") {
+                const macdResult = calculateMACD(data, rules.fastPeriod || 12, rules.slowPeriod || 26, rules.signalPeriod || 9);
+                indicators.macd = macdResult.macd;
+                indicators.signal = macdResult.signal;
+                indicators.histogram = macdResult.histogram;
+            }
+
+            if (rules.type === "custom") {
+                indicators.rsi = calculateRSI(data, rules.rsiPeriod || 14);
+                indicators.sma20 = calculateSMA(data, 20);
+            }
+
+            if (rules.type === "high_freq") {
+                indicators.shortMA = calculateSMA(data, rules.shortPeriod);
+                indicators.longMA = calculateSMA(data, rules.longPeriod);
+                indicators.rsi = calculateRSI(data, rules.rsiPeriod);
+            }
+
+            return indicators;
         }
 
-        // Calculate averages
-        stats.winRate = stats.wins + stats.losses > 0 ? (stats.wins / (stats.wins + stats.losses)) * 100 : 0;
-        stats.avgWin = stats.wins > 0 ? stats.avgWin / stats.wins : 0;
-        stats.avgLoss = stats.losses > 0 ? stats.avgLoss / stats.losses : 0;
+        function getIndicatorValues(indicators, index, rules) {
+            const values = [];
+            
+            if (rules.type === "crossover" || rules.type === "moving_average") {
+                values.push(indicators.shortMA[index], indicators.longMA[index]);
+            }
+            
+            if (rules.type === "rsi") {
+                values.push(indicators.rsi[index]);
+            }
+            
+            if (rules.type === "macd") {
+                values.push(indicators.macd[index], indicators.signal[index], indicators.histogram[index]);
+            }
 
-        return stats;
-      }
+            if (rules.type === "custom") {
+                values.push(indicators.rsi[index]);
+            }
 
-      function displayStrategyResults(results) {
-        const stats = results.stats;
-        
-        // Add more detailed stats to the tester div
-        const testerDiv = document.getElementById('tester');
-        testerDiv.innerHTML = `
-          <h3>Strategy Tester - ${results.strategyName}</h3>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <div>
-              <p>Total Trades: <span style="font-weight: bold;">${stats.totalTrades}</span></p>
-              <p>Win Rate: <span style="font-weight: bold; color: ${stats.winRate > 50 ? 'green' : 'red'};">${stats.winRate.toFixed(2)}%</span></p>
-              <p>Wins: <span style="color: green;">${stats.wins}</span> | Losses: <span style="color: red;">${stats.losses}</span></p>
-            </div>
-            <div>
-              <p>Net Profit: <span style="font-weight: bold; color: ${stats.totalProfit > 0 ? 'green' : 'red'};">${stats.totalProfit.toFixed(2)} USDT</span></p>
-              <p>Total Return: <span style="font-weight: bold; color: ${stats.totalProfitPercent > 0 ? 'green' : 'red'};">${stats.totalProfitPercent.toFixed(2)}%</span></p>
-              <p>Max Drawdown: <span style="color: red;">${stats.maxDrawdown.toFixed(2)} USDT</span></p>
-            </div>
-          </div>
-        `;
-      }
+            if (rules.type === "high_freq") {
+                values.push(indicators.shortMA[index], indicators.longMA[index], indicators.rsi[index]);
+            }
 
-      // Global variables to track chart series
-      let ema20Series = null;
-      let ema200Series = null;
-      let currentCandles = [];
-
-      function clearChartOverlays() {
-        // Remove existing line series
-        if (ema20Series) {
-          chart.removeSeries(ema20Series);
-          ema20Series = null;
-        }
-        if (ema200Series) {
-          chart.removeSeries(ema200Series);
-          ema200Series = null;
-        }
-        
-        // Clear markers
-        candleSeries.setMarkers([]);
-      }
-
-      function updateChartWithStrategy() {
-        if (currentCandles.length === 0) {
-          console.log("No data available for strategy testing");
-          return;
+            return values;
         }
 
-        console.log("Starting strategy update...");
-        console.log("Current candles length:", currentCandles.length);
-        console.log("Selected strategy:", document.getElementById('strategySelect').value);
-
-        // Clear existing overlays
-        clearChartOverlays();
-
-        // Get selected strategy
-        const selectedStrategy = document.getElementById('strategySelect').value;
-        const strategyRules = getStrategyRules(selectedStrategy);
-        
-        console.log("Strategy rules:", strategyRules);
-
-        // Add EMA lines for visual reference (if not already added)
-        if (!ema20Series) {
-          ema20Series = chart.addLineSeries({ color: 'blue', lineWidth: 1 });
-          ema200Series = chart.addLineSeries({ color: 'orange', lineWidth: 1 });
-          
-          // Calculate and set EMA data
-          const ema = (data, len) => {
-            const k = 2 / (len + 1);
-            let emaArray = [];
-            let prevEma = data[0].close;
+        function calculateSMA(data, period) {
+            const sma = [];
             for (let i = 0; i < data.length; i++) {
-              const close = data[i].close;
-              const nextEma = i === 0 ? close : close * k + prevEma * (1 - k);
-              emaArray.push({ time: data[i].time, value: nextEma });
-              prevEma = nextEma;
+                if (i < period - 1) {
+                    sma.push(null);
+                } else {
+                    const sum = data.slice(i - period + 1, i + 1).reduce((acc, candle) => acc + candle.close, 0);
+                    sma.push(sum / period);
+                }
             }
-            return emaArray;
-          };
-
-          ema20Series.setData(ema(currentCandles, 20));
-          ema200Series.setData(ema(currentCandles, 200));
+            return sma;
         }
 
-        // Run the strategy
-        const results = runStrategy(currentCandles, strategyRules);
-        
-        console.log("Strategy results:", results);
-        console.log("Buy markers:", results.buyMarkers.length);
-        console.log("Sell markers:", results.sellMarkers.length);
-        
-        // Display results
-        displayStrategyResults(results);
-        
-        // Add markers to chart
-        const allMarkers = [...results.buyMarkers, ...results.sellMarkers];
-        console.log("Setting markers:", allMarkers);
-        
-        // Add a test marker to see if markers work at all
-        if (allMarkers.length === 0) {
-          console.log("No markers found, adding test marker...");
-          const testMarker = {
-            time: currentCandles[Math.floor(currentCandles.length / 2)].time,
-            position: 'belowBar',
-            color: 'blue',
-            shape: 'circle',
-            text: 'TEST',
-            size: 2
-          };
-          candleSeries.setMarkers([testMarker]);
-          console.log("Test marker added:", testMarker);
-        } else {
-          candleSeries.setMarkers(allMarkers);
+        function calculateRSI(data, period = 14) {
+            const rsi = [];
+            const gains = [];
+            const losses = [];
+
+            for (let i = 1; i < data.length; i++) {
+                const change = data[i].close - data[i - 1].close;
+                gains.push(change > 0 ? change : 0);
+                losses.push(change < 0 ? Math.abs(change) : 0);
+            }
+
+            for (let i = 0; i < data.length; i++) {
+                if (i < period) {
+                    rsi.push(null);
+                } else {
+                    const avgGain = gains.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0) / period;
+                    const avgLoss = losses.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0) / period;
+                    const rs = avgGain / avgLoss;
+                    rsi.push(100 - (100 / (1 + rs)));
+                }
+            }
+
+            return rsi;
         }
-        
-        console.log(`Strategy "${results.strategyName}" completed with ${results.trades.length} trades`);
-      }
-  
-  
-      const defaultPair = 'btcusdt';
-      fetchData(defaultPair);
-      setupWebSocket(defaultPair);
 
-      document.getElementById('pairSelect').addEventListener('change', (e) => {
-        const selectedPair = e.target.value;
-        fetchData(selectedPair);
-        setupWebSocket(selectedPair);
-      });
+        function calculateMACD(data, fastPeriod = 12, slowPeriod = 26, signalPeriod = 9) {
+            const ema = (data, period) => {
+                const k = 2 / (period + 1);
+                const emaArray = [];
+                let prevEma = data[0].close;
+                
+                for (let i = 0; i < data.length; i++) {
+                    const close = data[i].close;
+                    const nextEma = i === 0 ? close : close * k + prevEma * (1 - k);
+                    emaArray.push(nextEma);
+                    prevEma = nextEma;
+                }
+                return emaArray;
+            };
 
-      // Add event listeners for strategy testing
-      document.getElementById('strategySelect').addEventListener('change', () => {
-        // Re-run backtest when strategy changes
-        updateChartWithStrategy();
-      });
+            const fastEMA = ema(data, fastPeriod);
+            const slowEMA = ema(data, slowPeriod);
+            
+            const macdLine = fastEMA.map((fast, i) => fast - slowEMA[i]);
+            const signalLine = ema(macdLine.map((val, i) => ({ close: val })), signalPeriod);
+            const histogram = macdLine.map((macd, i) => macd - signalLine[i]);
 
-      document.getElementById('runStrategyBtn').addEventListener('click', () => {
-        // Re-run backtest when button is clicked
-        updateChartWithStrategy();
-      });
+            return { macd: macdLine, signal: signalLine, histogram };
+        }
+
+        function calculateStrategyStats(trades) {
+            const stats = {
+                totalTrades: trades.length,
+                buyTrades: trades.filter(t => t.action === 'BUY').length,
+                sellTrades: trades.filter(t => t.action === 'SELL').length,
+                wins: 0,
+                losses: 0,
+                totalProfit: 0,
+                totalProfitPercent: 0,
+                maxDrawdown: 0,
+                winRate: 0,
+                avgWin: 0,
+                avgLoss: 0
+            };
+
+            let currentDrawdown = 0;
+            let peak = 0;
+
+            for (let i = 1; i < trades.length; i += 2) {
+                if (i < trades.length) {
+                    const buy = trades[i - 1];
+                    const sell = trades[i];
+                    
+                    if (buy.action === 'BUY' && sell.action === 'SELL') {
+                        const profit = sell.price - buy.price;
+                        const profitPercent = ((sell.price - buy.price) / buy.price) * 100;
+                        
+                        stats.totalProfit += profit;
+                        stats.totalProfitPercent += profitPercent;
+                        
+                        if (profit > 0) {
+                            stats.wins++;
+                            stats.avgWin += profit;
+                        } else {
+                            stats.losses++;
+                            stats.avgLoss += Math.abs(profit);
+                        }
+
+                        if (stats.totalProfit > peak) {
+                            peak = stats.totalProfit;
+                        }
+                        currentDrawdown = peak - stats.totalProfit;
+                        if (currentDrawdown > stats.maxDrawdown) {
+                            stats.maxDrawdown = currentDrawdown;
+                        }
+                    }
+                }
+            }
+
+            stats.winRate = stats.wins + stats.losses > 0 ? (stats.wins / (stats.wins + stats.losses)) * 100 : 0;
+            stats.avgWin = stats.wins > 0 ? stats.avgWin / stats.wins : 0;
+            stats.avgLoss = stats.losses > 0 ? stats.avgLoss / stats.losses : 0;
+
+            return stats;
+        }
+
+        function displayStrategyResults(results) {
+            const stats = results.stats;
+            const resultsContent = document.getElementById('resultsContent');
+            
+            let tradeListHTML = '';
+            if (results.trades.length > 0) {
+                tradeListHTML = `
+                    <div class="trade-table">
+                        <h4>Trade History</h4>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Action</th>
+                                    <th>Price</th>
+                                    <th>Profit</th>
+                                    <th>P&L %</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                
+                results.trades.forEach((trade, index) => {
+                    const tradeTime = new Date(trade.time * 1000).toLocaleString();
+                    const profit = trade.profit || 0;
+                    const profitPercent = trade.profitPercent || 0;
+                    
+                    const profitColor = profit >= 0 ? '#4CAF50' : '#f44336';
+                    const actionColor = trade.action === 'BUY' ? '#4CAF50' : '#f44336';
+                    
+                    tradeListHTML += `
+                        <tr>
+                            <td>${tradeTime}</td>
+                            <td style="color: ${actionColor}; font-weight: bold;">${trade.action}</td>
+                            <td>$${trade.price.toFixed(2)}</td>
+                            <td style="color: ${profitColor};">${profit > 0 ? '+' : ''}$${profit.toFixed(2)}</td>
+                            <td style="color: ${profitColor};">${profitPercent > 0 ? '+' : ''}${profitPercent.toFixed(2)}%</td>
+                        </tr>
+                    `;
+                });
+                
+                tradeListHTML += `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+            
+            resultsContent.innerHTML = `
+                <h4>${results.strategyName}</h4>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">${stats.totalTrades}</div>
+                        <div>Total Trades</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value ${stats.winRate > 50 ? 'positive' : 'negative'}">${stats.winRate.toFixed(2)}%</div>
+                        <div>Win Rate</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value ${stats.totalProfit > 0 ? 'positive' : 'negative'}">${stats.totalProfit > 0 ? '+' : ''}$${stats.totalProfit.toFixed(2)}</div>
+                        <div>Net Profit</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value ${stats.totalProfitPercent > 0 ? 'positive' : 'negative'}">${stats.totalProfitPercent > 0 ? '+' : ''}${stats.totalProfitPercent.toFixed(2)}%</div>
+                        <div>Total Return</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value negative">$${stats.maxDrawdown.toFixed(2)}</div>
+                        <div>Max Drawdown</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${stats.wins} / ${stats.losses}</div>
+                        <div>Wins / Losses</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value positive">$${stats.avgWin.toFixed(2)}</div>
+                        <div>Avg Win</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value negative">$${stats.avgLoss.toFixed(2)}</div>
+                        <div>Avg Loss</div>
+                    </div>
+                </div>
+                <div style="margin-top: 15px; display: flex; gap: 20px;">
+                    <div>
+                        <strong>Buy Signals:</strong> <span style="color: #4CAF50;">${results.buyMarkers.length}</span>
+                    </div>
+                    <div>
+                        <strong>Sell Signals:</strong> <span style="color: #f44336;">${results.sellMarkers.length}</span>
+                    </div>
+                </div>
+                ${tradeListHTML}
+            `;
+        }
+
+        function updateChartWithStrategy() {
+            if (currentCandles.length === 0) {
+                console.log("No data available for strategy testing");
+                return;
+            }
+
+            console.log("Starting strategy update...");
+            candleSeries.setMarkers([]);
+
+            const selectedStrategy = document.getElementById('strategySelect').value;
+            const strategyRules = getStrategyRules(selectedStrategy);
+            
+            const results = runStrategy(currentCandles, strategyRules);
+            
+            displayStrategyResults(results);
+            
+            const allMarkers = [...results.buyMarkers, ...results.sellMarkers];
+            candleSeries.setMarkers(allMarkers);
+            
+            console.log(`Strategy "${results.strategyName}" completed with ${results.trades.length} trades`);
+        }
+
+        // Initialize
+        const defaultPair = 'btcusdt';
+        fetchData(defaultPair);
+        setupWebSocket(defaultPair);
+
+        // Event listeners
+        document.getElementById('pairSelect').addEventListener('change', (e) => {
+            const selectedPair = e.target.value;
+            fetchData(selectedPair);
+            setupWebSocket(selectedPair);
+        });
+
+        document.getElementById('strategySelect').addEventListener('change', () => {
+            updateChartWithStrategy();
+        });
+
+        document.getElementById('runStrategyBtn').addEventListener('click', () => {
+            updateChartWithStrategy();
+        });
+
+        document.getElementById('clearBtn').addEventListener('click', () => {
+            candleSeries.setMarkers([]);
+            document.getElementById('resultsContent').innerHTML = '<p>Chart cleared.</p>';
+        });
     </script>
-  </body>
+</body>
+</html> 

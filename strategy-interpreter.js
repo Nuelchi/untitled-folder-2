@@ -114,12 +114,20 @@ class StrategyInterpreter {
 
     const startIndex = this.getStartIndex(strategy);
     
+    console.log(`Starting trading logic from index ${startIndex} with ${this.data.length} data points`);
+    
     for (let i = startIndex; i < this.data.length; i++) {
       const currentData = this.data[i];
       const indicatorValues = this.getIndicatorValues(i);
 
-      // Check buy condition
-      if (!inPosition && this.evaluateCondition(strategy.conditions.buy, indicatorValues, i)) {
+      // Evaluate conditions
+      const buyCondition = this.evaluateCondition(strategy.conditions.buy, indicatorValues, i);
+      const sellCondition = this.evaluateCondition(strategy.conditions.sell, indicatorValues, i);
+
+      // Check for buy signal (not in position and buy condition is true)
+      if (!inPosition && buyCondition) {
+        console.log(`BUY signal at index ${i}, time ${currentData.time}, price ${currentData.close}`);
+        
         this.trades.push({
           time: currentData.time,
           action: 'BUY',
@@ -141,8 +149,10 @@ class StrategyInterpreter {
         entryTime = currentData.time;
       }
       
-      // Check sell condition
-      else if (inPosition && this.evaluateCondition(strategy.conditions.sell, indicatorValues, i)) {
+      // Check for sell signal (in position and sell condition is true)
+      else if (inPosition && sellCondition) {
+        console.log(`SELL signal at index ${i}, time ${currentData.time}, price ${currentData.close}, profit: ${currentData.close - entryPrice}`);
+        
         this.trades.push({
           time: currentData.time,
           action: 'SELL',
@@ -164,6 +174,8 @@ class StrategyInterpreter {
         inPosition = false;
       }
     }
+
+    console.log(`Trading logic completed. Total trades: ${this.trades.length}, Buy markers: ${this.buyMarkers.length}, Sell markers: ${this.sellMarkers.length}`);
   }
 
   // Evaluate condition function or expression
@@ -211,6 +223,17 @@ class StrategyInterpreter {
       }
     });
     return values;
+  }
+
+  // Get indicator values for previous index
+  getPreviousIndicatorValues(index) {
+    if (index <= 0) return {};
+    return this.getIndicatorValues(index - 1);
+  }
+
+  // Check if this is a crossover (condition changed from false to true)
+  isCrossover(currentCondition, previousCondition) {
+    return currentCondition && !previousCondition;
   }
 
   // Get starting index based on strategy requirements
