@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Trading Strategy Tester</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #ffffff;
+        }
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        select, button {
+            padding: 8px 12px;
+            border: 1px solid #333;
+            border-radius: 4px;
+            background: #2a2a2a;
+            color: #ffffff;
+        }
+        button {
+            background: #007bff;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .strategy-info {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .stat-item {
+            background: #333;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .positive { color: #4CAF50; }
+        .negative { color: #f44336; }
+        .neutral { color: #FF9800; }
+    </style>
+</head>
+<body>
+    <h1>Advanced Trading Strategy Tester</h1>
+    
+    <div class="controls">
+        <label for="pairSelect">Trading Pair:</label>
+        <select id="pairSelect">
+            <option value="btcusdt">BTC/USDT</option>
+            <option value="ethusdt">ETH/USDT</option>
+            <option value="bnbusdt">BNB/USDT</option>
+            <option value="xrpusdt">XRP/USDT</option>
+            <option value="adausdt">ADA/USDT</option>
+            <option value="ltcusdt">LTC/USDT</option>
+            <option value="solusdt">SOL/USDT</option>
+            <option value="dogeusdt">DOGE/USDT</option>
+            <option value="maticusdt">MATIC/USDT</option>
+            <option value="dotusdt">DOT/USDT</option>
+        </select>
+        
+        <label for="strategySelect">Strategy:</label>
+        <select id="strategySelect">
+            <!-- Will be populated by JavaScript -->
+        </select>
+        
+        <button id="runStrategyBtn">Run Strategy</button>
+        <button id="clearBtn">Clear Chart</button>
+    </div>
+
+    <div class="strategy-info" id="strategyInfo">
+        <h3>Strategy Information</h3>
+        <p id="strategyDescription">Select a strategy to see its description and parameters.</p>
+    </div>
+
+    <div id="chart" style="width: 100%; height: 1000px;"></div>
+    
+    <div id="tester" style="padding: 1rem; background: #2a2a2a; border-radius: 4px; margin-top: 20px;">
+        <h3>Strategy Results</h3>
+        <div id="resultsContent">
+            <p>Run a strategy to see results here.</p>
+        </div>
+    </div>
+
+    <!-- Load external libraries -->
+    <script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
+    
+    <!-- Load our modular components -->
+    <script src="strategy-interpreter.js"></script>
+    <script src="strategy-library.js"></script>
+    <script src="chart-manager.js"></script>
+    
+    <script>
+        // Initialize components
+        let chartManager;
+        let strategyInterpreter;
+        let strategyLibrary;
+        let currentStrategy = null;
+
+        // Initialize the application
+        function initApp() {
+            // Initialize components
+            chartManager = new ChartManager('chart');
+            strategyInterpreter = new StrategyInterpreter();
+            strategyLibrary = new StrategyLibrary();
+
+            // Populate strategy dropdown
+            populateStrategyDropdown();
+
+            // Setup event listeners
+            setupEventListeners();
+
+            // Load initial data
+            loadInitialData();
+        }
+
+        // Populate strategy dropdown
+        function populateStrategyDropdown() {
+            const strategySelect = document.getElementById('strategySelect');
+            const strategies = strategyLibrary.getAllStrategies();
+            
+            strategySelect.innerHTML = '';
+            strategies.forEach(strategy => {
+                const option = document.createElement('option');
+                option.value = strategy.id;
+                option.textContent = strategy.name;
+                strategySelect.appendChild(option);
+            });
+
+            // Update strategy info
+            updateStrategyInfo();
+        }
+
+        // Update strategy information display
+        function updateStrategyInfo() {
+            const strategySelect = document.getElementById('strategySelect');
+            const strategyInfo = document.getElementById('strategyDescription');
+            
+            if (strategySelect.value) {
+                const strategy = strategyLibrary.getStrategy(strategySelect.value);
+                if (strategy) {
+                    strategyInfo.textContent = strategy.description;
+                }
+            }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Strategy selection change
+            document.getElementById('strategySelect').addEventListener('change', () => {
+                updateStrategyInfo();
+            });
+
+            // Run strategy button
+            document.getElementById('runStrategyBtn').addEventListener('click', () => {
+                runCurrentStrategy();
+            });
+
+            // Clear chart button
+            document.getElementById('clearBtn').addEventListener('click', () => {
+                chartManager.clearIndicators();
+                chartManager.clearMarkers();
+                document.getElementById('resultsContent').innerHTML = '<p>Chart cleared.</p>';
+            });
+
+            // Trading pair change
+            document.getElementById('pairSelect').addEventListener('change', (e) => {
+                loadDataForPair(e.target.value);
+            });
+        }
+
+        // Load initial data
+        async function loadInitialData() {
+            const defaultPair = 'btcusdt';
+            await loadDataForPair(defaultPair);
+        }
+
+        // Load data for specific trading pair
+        async function loadDataForPair(pair) {
+            try {
+                console.log(`Loading data for ${pair}...`);
+                
+                // Fetch historical data
+                await chartManager.fetchData(pair, '1m', 5000);
+                
+                // Setup real-time data
+                chartManager.setupWebSocket(pair, '1m');
+                
+                // Add default indicators
+                addDefaultIndicators();
+                
+                console.log(`Data loaded for ${pair}`);
+            } catch (error) {
+                console.error('Error loading data:', error);
+            }
+        }
+
+        // Add default indicators to chart
+        function addDefaultIndicators() {
+            // Add EMA lines for reference
+            chartManager.addMovingAverage(20, 'ema', { color: '#2196F3', lineWidth: 1 });
+            chartManager.addMovingAverage(50, 'ema', { color: '#FF9800', lineWidth: 1 });
+        }
+
+        // Run current strategy
+        async function runCurrentStrategy() {
+            try {
+                const strategySelect = document.getElementById('strategySelect');
+                const strategyId = strategySelect.value;
+                
+                if (!strategyId) {
+                    alert('Please select a strategy first.');
+                    return;
+                }
+
+                console.log(`Running strategy: ${strategyId}`);
+
+                // Get strategy from library
+                const strategy = strategyLibrary.getStrategy(strategyId);
+                if (!strategy) {
+                    throw new Error(`Strategy not found: ${strategyId}`);
+                }
+
+                // Get current data
+                const data = chartManager.getCurrentData();
+                if (!data || data.length === 0) {
+                    throw new Error('No data available for strategy testing');
+                }
+
+                // Clear previous indicators and markers
+                chartManager.clearIndicators();
+                chartManager.clearMarkers();
+
+                // Add default indicators back
+                addDefaultIndicators();
+
+                // Add strategy-specific indicators
+                addStrategyIndicators(strategy);
+
+                // Execute strategy
+                const strategyWithData = {
+                    ...strategy,
+                    data: data
+                };
+
+                const results = strategyInterpreter.interpret(strategyWithData);
+
+                // Display results
+                displayResults(results);
+
+                // Add markers to chart
+                const allMarkers = [...results.buyMarkers, ...results.sellMarkers];
+                chartManager.setMarkers(allMarkers);
+
+                console.log(`Strategy completed: ${results.trades.length} trades found`);
+
+            } catch (error) {
+                console.error('Error running strategy:', error);
+                alert(`Error running strategy: ${error.message}`);
+            }
+        }
+
+        // Add indicators based on strategy requirements
+        function addStrategyIndicators(strategy) {
+            if (strategy.indicators) {
+                // Add SMAs
+                if (strategy.indicators.sma) {
+                    strategy.indicators.sma.forEach(period => {
+                        chartManager.addMovingAverage(period, 'sma', { 
+                            color: chartManager.getRandomColor() 
+                        });
+                    });
+                }
+
+                // Add EMAs
+                if (strategy.indicators.ema) {
+                    strategy.indicators.ema.forEach(period => {
+                        chartManager.addMovingAverage(period, 'ema', { 
+                            color: chartManager.getRandomColor() 
+                        });
+                    });
+                }
+
+                // Add RSI
+                if (strategy.indicators.rsi) {
+                    chartManager.addRSI(strategy.indicators.rsi.period || 14);
+                }
+
+                // Add MACD
+                if (strategy.indicators.macd) {
+                    const config = strategy.indicators.macd;
+                    chartManager.addMACD(
+                        config.fastPeriod || 12,
+                        config.slowPeriod || 26,
+                        config.signalPeriod || 9
+                    );
+                }
+
+                // Add Bollinger Bands
+                if (strategy.indicators.bollinger) {
+                    const config = strategy.indicators.bollinger;
+                    chartManager.addBollingerBands(
+                        config.period || 20,
+                        config.stdDev || 2
+                    );
+                }
+            }
+        }
+
+        // Display strategy results
+        function displayResults(results) {
+            const stats = results.stats;
+            const resultsContent = document.getElementById('resultsContent');
+            
+            // Create trade list HTML
+            let tradeListHTML = '';
+            if (results.trades.length > 0) {
+                tradeListHTML = `
+                    <div style="margin-top: 20px;">
+                        <h4>Trade History</h4>
+                        <div style="max-height: 300px; overflow-y: auto; background: #333; padding: 10px; border-radius: 4px;">
+                            <table style="width: 100%; border-collapse: collapse; color: white;">
+                                <thead>
+                                    <tr style="border-bottom: 1px solid #555;">
+                                        <th style="padding: 8px; text-align: left;">Time</th>
+                                        <th style="padding: 8px; text-align: left;">Action</th>
+                                        <th style="padding: 8px; text-align: right;">Price</th>
+                                        <th style="padding: 8px; text-align: right;">Profit</th>
+                                        <th style="padding: 8px; text-align: right;">P&L %</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                `;
+                
+                let runningProfit = 0;
+                results.trades.forEach((trade, index) => {
+                    const tradeTime = new Date(trade.time * 1000).toLocaleString();
+                    const profit = trade.profit || 0;
+                    const profitPercent = trade.profitPercent || 0;
+                    runningProfit += profit;
+                    
+                    const profitColor = profit >= 0 ? '#4CAF50' : '#f44336';
+                    const actionColor = trade.action === 'BUY' ? '#4CAF50' : '#f44336';
+                    
+                    tradeListHTML += `
+                        <tr style="border-bottom: 1px solid #444;">
+                            <td style="padding: 8px;">${tradeTime}</td>
+                            <td style="padding: 8px; color: ${actionColor}; font-weight: bold;">${trade.action}</td>
+                            <td style="padding: 8px; text-align: right;">$${trade.price.toFixed(2)}</td>
+                            <td style="padding: 8px; text-align: right; color: ${profitColor};">${profit > 0 ? '+' : ''}$${profit.toFixed(2)}</td>
+                            <td style="padding: 8px; text-align: right; color: ${profitColor};">${profitPercent > 0 ? '+' : ''}${profitPercent.toFixed(2)}%</td>
+                        </tr>
+                    `;
+                });
+                
+                tradeListHTML += `
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            resultsContent.innerHTML = `
+                <h4>${results.strategyName}</h4>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">${stats.totalTrades}</div>
+                        <div>Total Trades</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value ${stats.winRate > 50 ? 'positive' : 'negative'}">${stats.winRate.toFixed(2)}%</div>
+                        <div>Win Rate</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value ${stats.totalProfit > 0 ? 'positive' : 'negative'}">${stats.totalProfit > 0 ? '+' : ''}$${stats.totalProfit.toFixed(2)}</div>
+                        <div>Net Profit</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value ${stats.totalProfitPercent > 0 ? 'positive' : 'negative'}">${stats.totalProfitPercent > 0 ? '+' : ''}${stats.totalProfitPercent.toFixed(2)}%</div>
+                        <div>Total Return</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value negative">$${stats.maxDrawdown.toFixed(2)}</div>
+                        <div>Max Drawdown</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${stats.wins} / ${stats.losses}</div>
+                        <div>Wins / Losses</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value positive">$${stats.avgWin.toFixed(2)}</div>
+                        <div>Avg Win</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value negative">$${stats.avgLoss.toFixed(2)}</div>
+                        <div>Avg Loss</div>
+                    </div>
+                </div>
+                <div style="margin-top: 15px; display: flex; gap: 20px;">
+                    <div>
+                        <strong>Buy Signals:</strong> <span style="color: #4CAF50;">${results.buyMarkers.length}</span>
+                    </div>
+                    <div>
+                        <strong>Sell Signals:</strong> <span style="color: #f44336;">${results.sellMarkers.length}</span>
+                    </div>
+                </div>
+                ${tradeListHTML}
+            `;
+        }
+
+        // Initialize app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>

@@ -76,6 +76,32 @@
             background: #444;
             font-weight: bold;
         }
+        .trade-table {
+            margin-top: 20px;
+        }
+        
+        .trade-toggle-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            width: 100%;
+            text-align: left;
+            transition: background-color 0.3s;
+        }
+        
+        .trade-toggle-btn:hover {
+            background: #0056b3;
+        }
+        
+        .trade-toggle-btn span {
+            margin-right: 8px;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -105,11 +131,14 @@
             <option value="high_frequency">High Frequency Strategy</option>
         </select>
         
-        <button id="runStrategyBtn">Run Strategy</button>
+        <button id="runStrategyBtn" style="margin-left: 20px; padding: 5px 15px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer;">Run Strategy</button>
+        
+        <label for="accountSize" style="margin-left: 20px;">Account Size ($):</label>
+        <input type="number" id="accountSize" value="10000" min="100" step="100" style="margin-left: 5px; padding: 3px 8px; border: 1px solid #ccc; border-radius: 3px; width: 120px;">
         <button id="clearBtn">Clear Chart</button>
     </div>
 
-    <div id="chart" style="width: 100%; height: 850px;"></div>
+    <div id="chart" style="width: 100%; height: 700px;"></div>
     
     <div id="tester" style="padding: 1rem; background: #2a2a2a; border-radius: 4px; margin-top: 20px;">
         <h3>Strategy Results</h3>
@@ -121,8 +150,8 @@
     <script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
     <script>
         const chart = LightweightCharts.createChart(document.getElementById('chart'), {
-            layout: { backgroundColor: '#000000', textColor: '#ffffff' },
-            grid: { vertLines: { color: '#333333' }, horLines: { color: '#333333' } },
+            layout: { backgroundColor: '#000000', textColor: '#000' },
+            grid: { vertLines: { color: '#eee' }, horLines: { color: '#eee' } },
             timeScale: { timeVisible: true, secondsVisible: false },
         });
 
@@ -496,6 +525,7 @@
 
             let currentDrawdown = 0;
             let peak = 0;
+            let runningBalance = 10000; // Start with account size
 
             for (let i = 1; i < trades.length; i += 2) {
                 if (i < trades.length) {
@@ -503,8 +533,11 @@
                     const sell = trades[i];
                     
                     if (buy.action === 'BUY' && sell.action === 'SELL') {
-                        const profit = sell.price - buy.price;
                         const profitPercent = ((sell.price - buy.price) / buy.price) * 100;
+                        const positionSize = runningBalance * 0.1; // 10% of current balance
+                        const profit = (profitPercent / 100) * positionSize;
+                        
+                        runningBalance += profit;
                         
                         stats.totalProfit += profit;
                         stats.totalProfitPercent += profitPercent;
@@ -517,10 +550,10 @@
                             stats.avgLoss += Math.abs(profit);
                         }
 
-                        if (stats.totalProfit > peak) {
-                            peak = stats.totalProfit;
+                        if (runningBalance > peak) {
+                            peak = runningBalance;
                         }
-                        currentDrawdown = peak - stats.totalProfit;
+                        currentDrawdown = peak - runningBalance;
                         if (currentDrawdown > stats.maxDrawdown) {
                             stats.maxDrawdown = currentDrawdown;
                         }
@@ -538,29 +571,36 @@
         function displayStrategyResults(results) {
             const stats = results.stats;
             const resultsContent = document.getElementById('resultsContent');
+            const accountSize = parseFloat(document.getElementById('accountSize').value) || 10000;
             
             let tradeListHTML = '';
             if (results.trades.length > 0) {
                 tradeListHTML = `
                     <div class="trade-table">
-                        <h4>Trade History</h4>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Time</th>
-                                    <th>Action</th>
-                                    <th>Price</th>
-                                    <th>Profit</th>
-                                    <th>P&L %</th>
-                                </tr>
-                            </thead>
-                            <tbody>
+                        <button class="trade-toggle-btn" onclick="toggleTradeHistory()">
+                            <span id="toggle-text">▼</span> Show Trade History (${results.trades.length} trades)
+                        </button>
+                        <div id="trade-history-content" style="display: none;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Action</th>
+                                        <th>Price</th>
+                                        <th>Position Size</th>
+                                        <th>Profit</th>
+                                        <th>P&L %</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
                 `;
                 
                 results.trades.forEach((trade, index) => {
                     const tradeTime = new Date(trade.time * 1000).toLocaleString();
                     const profit = trade.profit || 0;
                     const profitPercent = trade.profitPercent || 0;
+                    const positionSize = accountSize * 0.1; // 10% of account per trade
+                    const actualProfit = (profit / trade.price) * positionSize;
                     
                     const profitColor = profit >= 0 ? '#4CAF50' : '#f44336';
                     const actionColor = trade.action === 'BUY' ? '#4CAF50' : '#f44336';
@@ -570,66 +610,75 @@
                             <td>${tradeTime}</td>
                             <td style="color: ${actionColor}; font-weight: bold;">${trade.action}</td>
                             <td>$${trade.price.toFixed(2)}</td>
-                            <td style="color: ${profitColor};">${profit > 0 ? '+' : ''}$${profit.toFixed(2)}</td>
+                            <td>$${positionSize.toFixed(2)}</td>
+                            <td style="color: ${profitColor};">${actualProfit > 0 ? '+' : ''}$${actualProfit.toFixed(2)}</td>
                             <td style="color: ${profitColor};">${profitPercent > 0 ? '+' : ''}${profitPercent.toFixed(2)}%</td>
                         </tr>
                     `;
                 });
                 
                 tradeListHTML += `
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-            }
-            
-            resultsContent.innerHTML = `
-                <h4>${results.strategyName}</h4>
-                <div class="stats-grid">
-                    <div class="stat-item">
-                        <div class="stat-value">${stats.totalTrades}</div>
-                        <div>Total Trades</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value ${stats.winRate > 50 ? 'positive' : 'negative'}">${stats.winRate.toFixed(2)}%</div>
-                        <div>Win Rate</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value ${stats.totalProfit > 0 ? 'positive' : 'negative'}">${stats.totalProfit > 0 ? '+' : ''}$${stats.totalProfit.toFixed(2)}</div>
-                        <div>Net Profit</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value ${stats.totalProfitPercent > 0 ? 'positive' : 'negative'}">${stats.totalProfitPercent > 0 ? '+' : ''}${stats.totalProfitPercent.toFixed(2)}%</div>
-                        <div>Total Return</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value negative">$${stats.maxDrawdown.toFixed(2)}</div>
-                        <div>Max Drawdown</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value">${stats.wins} / ${stats.losses}</div>
-                        <div>Wins / Losses</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value positive">$${stats.avgWin.toFixed(2)}</div>
-                        <div>Avg Win</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-value negative">$${stats.avgLoss.toFixed(2)}</div>
-                        <div>Avg Loss</div>
-                    </div>
-                </div>
-                <div style="margin-top: 15px; display: flex; gap: 20px;">
-                    <div>
-                        <strong>Buy Signals:</strong> <span style="color: #4CAF50;">${results.buyMarkers.length}</span>
-                    </div>
-                    <div>
-                        <strong>Sell Signals:</strong> <span style="color: #f44336;">${results.sellMarkers.length}</span>
-                    </div>
-                </div>
-                ${tradeListHTML}
-            `;
-        }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    // Calculate total profit with position sizing
+                    const totalProfitWithSizing = stats.totalProfitPercent * accountSize * 0.01; // 1% of account per 1% return
+                    
+                    resultsContent.innerHTML = `
+                        <h4>${results.strategyName}</h4>
+                        <div style="margin-bottom: 10px; padding: 8px; background: #333; border-radius: 4px; color: #fff;">
+                            <strong>Account Size:</strong> $${accountSize.toLocaleString()} | 
+                            <strong>Position Size:</strong> $${(accountSize * 0.1).toFixed(2)} (10% per trade)
+                        </div>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="stat-value">${stats.totalTrades}</div>
+                                <div>Total Trades</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value ${stats.winRate > 50 ? 'positive' : 'negative'}">${stats.winRate.toFixed(2)}%</div>
+                                <div>Win Rate</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value ${totalProfitWithSizing > 0 ? 'positive' : 'negative'}">${totalProfitWithSizing > 0 ? '+' : ''}$${totalProfitWithSizing.toFixed(2)}</div>
+                                <div>Net Profit</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value ${stats.totalProfitPercent > 0 ? 'positive' : 'negative'}">${stats.totalProfitPercent > 0 ? '+' : ''}${stats.totalProfitPercent.toFixed(2)}%</div>
+                                <div>Total Return</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value negative">$${stats.maxDrawdown.toFixed(2)}</div>
+                                <div>Max Drawdown</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value">${stats.wins} / ${stats.losses}</div>
+                                <div>Wins / Losses</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value positive">$${stats.avgWin.toFixed(2)}</div>
+                                <div>Avg Win</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value negative">$${stats.avgLoss.toFixed(2)}</div>
+                                <div>Avg Loss</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 15px; display: flex; gap: 20px;">
+                            <div>
+                                <strong>Buy Signals:</strong> <span style="color: #4CAF50;">${results.buyMarkers.length}</span>
+                            </div>
+                            <div>
+                                <strong>Sell Signals:</strong> <span style="color: #f44336;">${results.sellMarkers.length}</span>
+                            </div>
+                        </div>
+                        ${tradeListHTML}
+                    `;
+                }
 
         function updateChartWithStrategy() {
             if (currentCandles.length === 0) {
@@ -651,6 +700,20 @@
             candleSeries.setMarkers(allMarkers);
             
             console.log(`Strategy "${results.strategyName}" completed with ${results.trades.length} trades`);
+        }
+
+        function toggleTradeHistory() {
+            const tradeHistoryContent = document.getElementById('trade-history-content');
+            const toggleText = document.getElementById('toggle-text');
+            const currentDisplay = tradeHistoryContent.style.display;
+
+            if (currentDisplay === 'none') {
+                tradeHistoryContent.style.display = 'block';
+                toggleText.textContent = '▲';
+            } else {
+                tradeHistoryContent.style.display = 'none';
+                toggleText.textContent = '▼';
+            }
         }
 
         // Initialize
